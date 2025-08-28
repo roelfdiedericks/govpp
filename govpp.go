@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"go.fd.io/govpp/adapter"
-	"go.fd.io/govpp/adapter/shmclient"
 	"go.fd.io/govpp/adapter/socketclient"
 	"go.fd.io/govpp/adapter/tcpclient"
 	"go.fd.io/govpp/core"
@@ -34,7 +33,6 @@ import (
 // The target parameter accepts the following formats:
 //   - "unix:///path/to/socket" - Unix domain socket connection
 //   - "tcp://host:port" - TCP connection
-//   - "shm://segment_name" - Shared memory connection (future)
 //   - "/path/to/socket" - Unix socket (backward compatibility)
 //   - "host:port" - TCP connection (if contains colon and no scheme)
 func Connect(target string) (*core.Connection, error) {
@@ -65,11 +63,6 @@ var NewVppAdapter = func(target string) adapter.VppAPI {
 		// Unix socket connection with explicit scheme
 		path := strings.TrimPrefix(target, "unix://")
 		return socketclient.NewVppClient(path)
-		
-	case strings.HasPrefix(target, "shm://"):
-		// Shared memory connection
-		shmName := strings.TrimPrefix(target, "shm://")
-		return shmclient.NewVppClient(shmName)
 		
 	case strings.Contains(target, ":") && !strings.HasPrefix(target, "/"):
 		// Assume TCP if it contains a colon and doesn't start with /
