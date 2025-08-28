@@ -22,7 +22,7 @@ import (
 
 	"go.fd.io/govpp"
 	"go.fd.io/govpp/api"
-	"go.fd.io/govpp/binapi/interface"
+	interfaces "go.fd.io/govpp/binapi/interface"
 	"go.fd.io/govpp/binapi/interface_types"
 	"go.fd.io/govpp/binapi/vpe"
 )
