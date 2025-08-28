@@ -19,7 +19,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 
 	"go.fd.io/govpp"
 	"go.fd.io/govpp/api"
@@ -127,7 +126,9 @@ func listInterfaces(ch api.Channel) {
 
 		fmt.Printf("  [%d] %s\n", msg.SwIfIndex, msg.InterfaceName)
 		fmt.Printf("      Admin: %s, Link: %s\n", adminState, linkState)
-		if msg.L2Address != nil && len(msg.L2Address) > 0 {
+		// Check if MAC address is not all zeros
+		if msg.L2Address[0] != 0 || msg.L2Address[1] != 0 || msg.L2Address[2] != 0 ||
+			msg.L2Address[3] != 0 || msg.L2Address[4] != 0 || msg.L2Address[5] != 0 {
 			fmt.Printf("      MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
 				msg.L2Address[0], msg.L2Address[1], msg.L2Address[2],
 				msg.L2Address[3], msg.L2Address[4], msg.L2Address[5])

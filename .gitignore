@@ -26,4 +26,4 @@ examples/stats-client/stats-client
 examples/stream-client/stream-client
 examples/union-example/union-example
 
-/govpp
+/govpp.vscode/

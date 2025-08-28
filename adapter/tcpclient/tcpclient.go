@@ -42,7 +42,7 @@ const (
 
 var (
 	// DefaultConnectTimeout is default timeout for connecting
-	DefaultConnectTimeout = time.Second * 3
+	DefaultConnectTimeout = time.Second * 10
 	// DefaultDisconnectTimeout is default timeout for disconnecting
 	DefaultDisconnectTimeout = time.Millisecond * 100
 	// DefaultKeepAlivePeriod is the default TCP keepalive period
@@ -301,23 +301,29 @@ func (c *Client) open(clientName string) error {
 		reply.Response, reply.Index, reply.Count)
 
 	c.clientIndex = reply.Index
-	msgTable := make(map[string]uint16, reply.Count)
+	msgTable := make(map[string]uint16, len(reply.MessageTable))
 
-	for i := uint16(0); i < reply.Count; i++ {
-		x, err := c.readMsgTimeout(nil, c.connectTimeout)
-		if err != nil {
-			return err
+	// The message table is embedded in the reply, not sent as separate messages
+	for _, entry := range reply.MessageTable {
+		name := strings.TrimRight(entry.Name, "\x00") // Remove null padding
+		if strings.Contains(name, "sockclnt_delete_") {
+			c.sockDelMsgId = entry.Index
 		}
-
-		strx := string(x)
-		if strings.Contains(strx, "sockclnt_delete_") {
-			c.sockDelMsgId = getMsgId(x)
-		}
-		msgName, msgCrc := getMsgNameCrc(x)
-		msgTable[msgName+"_"+msgCrc] = getMsgId(x)
-
-		if debugMsgIds {
-			log.Debugf(" #%03d: %80q %s", getMsgId(x), msgName+"_"+msgCrc, x)
+		
+		// Parse name and CRC from the entry name
+		parts := strings.SplitN(name, "_", 2)
+		if len(parts) >= 2 {
+			// Find the last underscore to separate CRC
+			lastUnderscore := strings.LastIndex(name, "_")
+			if lastUnderscore > 0 && lastUnderscore < len(name)-1 {
+				msgName := name[:lastUnderscore]
+				msgCrc := name[lastUnderscore+1:]
+				msgTable[msgName+"_"+msgCrc] = entry.Index
+				
+				if debugMsgIds {
+					log.Debugf(" #%03d: %80q", entry.Index, msgName+"_"+msgCrc)
+				}
+			}
 		}
 	}
 
