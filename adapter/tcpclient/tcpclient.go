@@ -566,23 +566,38 @@ func (c *Client) readMsg(buf []byte) ([]byte, error) {
 	}
 
 	if dataLen > 0 {
-		if dataLen > uint32(len(buf)) {
-			buf = make([]byte, dataLen)
+		// Allocate buffer if needed
+		var msg []byte
+		if buf == nil || len(buf) < int(dataLen) {
+			msg = make([]byte, dataLen)
+		} else {
+			msg = buf[:dataLen]
 		}
-		if n, err := c.reader.Read(buf[:dataLen]); err != nil {
+
+		// Use io.ReadFull to ensure we read all the data bytes
+		n, err := io.ReadFull(c.reader, msg)
+		if err != nil {
 			return nil, err
-		} else if uint32(n) != dataLen {
+		}
+		if n != int(dataLen) {
 			return nil, fmt.Errorf("invalid message length: expected %d, got %d", dataLen, n)
 		}
 
 		if debug {
-			log.Debugf(" - read data %d bytes: % 0X", dataLen, buf[:dataLen])
+			log.Debugf(" - read data %d bytes: % 0X", dataLen, msg[:min(100, int(dataLen))])
 		}
 
-		return buf[:dataLen], nil
+		return msg, nil
 	}
 
 	return nil, nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func getMsgId(msg []byte) uint16 {
