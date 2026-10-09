@@ -176,7 +176,7 @@ func (sc *StatsClient) ListStats(patterns ...string) (entries []adapter.StatIden
 
 	entries, err = sc.getIdentifierEntries(patterns...)
 	if err != nil {
-		return nil, err
+		return nil, sc.readErr(accessEpoch, err)
 	}
 
 	if !sc.accessEnd(accessEpoch) {
@@ -199,7 +199,7 @@ func (sc *StatsClient) DumpStats(patterns ...string) (entries []adapter.StatEntr
 
 	entries, err = sc.getStatEntries(patterns...)
 	if err != nil {
-		return nil, err
+		return nil, sc.readErr(accessEpoch, err)
 	}
 
 	if !sc.accessEnd(accessEpoch) {
@@ -222,7 +222,7 @@ func (sc *StatsClient) PrepareDir(patterns ...string) (*adapter.StatDir, error) 
 
 	entries, err := sc.getStatEntries(patterns...)
 	if err != nil {
-		return nil, err
+		return nil, sc.readErr(accessEpoch, err)
 	}
 
 	if !sc.accessEnd(accessEpoch) {
@@ -254,7 +254,7 @@ func (sc *StatsClient) PrepareDirOnIndex(indexes ...uint32) (*adapter.StatDir, e
 	}
 	entries, err := sc.getStatEntriesOnIndex(vector, indexes...)
 	if err != nil {
-		return nil, err
+		return nil, sc.readErr(accessEpoch, err)
 	}
 
 	if !sc.accessEnd(accessEpoch) {
@@ -292,7 +292,7 @@ func (sc *StatsClient) UpdateDir(dir *adapter.StatDir) (err error) {
 	}
 	for i := 0; i < len(dir.Entries); i++ {
 		if err := sc.updateStatOnIndex(&dir.Entries[i], dirVector); err != nil {
-			return err
+			return sc.readErr(accessEpoch, err)
 		}
 	}
 	if !sc.accessEnd(accessEpoch) {
@@ -490,6 +490,18 @@ func (sc *StatsClient) accessEnd(accessEpoch int64) bool {
 		return false
 	}
 	return true
+}
+
+// readErr maps an error from reading the stats segment. If VPP changed the
+// segment during the read (epoch moved or an update is in progress), the
+// error is an artefact of the concurrent change, for example a directory
+// vector that was reallocated between two reads, and the caller should
+// retry: return ErrStatsDataBusy. Otherwise return err unchanged.
+func (sc *StatsClient) readErr(accessEpoch int64, err error) error {
+	if !sc.accessEnd(accessEpoch) {
+		return adapter.ErrStatsDataBusy
+	}
+	return err
 }
 
 // getStatEntries retrieves all stats matching desired patterns, or all stats if no pattern is provided.
