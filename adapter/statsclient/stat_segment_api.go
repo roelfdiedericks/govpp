@@ -46,6 +46,10 @@ var dirTypeMapping = map[dirType]adapter.StatType{
 	4: adapter.NameVector,
 	5: adapter.Empty,
 	6: adapter.Symlink,
+	// STAT_DIR_TYPE_GAUGE (VPP 26.10: /sys/input_rate, /buffer-pools/*)
+	// keeps its value inline like a scalar; VPP's own stat client
+	// decodes both the same way.
+	9: adapter.ScalarIndex,
 }
 
 var dirTypeMappingLegacy = map[dirType]adapter.StatType{
